@@ -1,0 +1,193 @@
+#include <iostream>
+#include <cstdlib>
+#include <vector>
+#include <iomanip>
+#include <limits>
+#include <string>
+using namespace std;
+
+// Global Constants
+const int LEVEL_RANGE_CHANGE = 10;
+const int MAX_ATTEMPTS = 3;
+
+// Function Prototypes
+void DisplayGameIntro();
+string GetUserName();
+int GetNumericValue(const string &prompt);
+bool AskToPlayAgain();
+void DisplaySummaryReport(const vector<vector<int>> &questions, int totalCorrect, int totalIncorrect);
+void CheckForLevelChange(int &mathLevel, int &ansCorrect, int &ansIncorrect, int &currentRange);
+vector<int> GenerateRandomQuestion(int mathLevel, int currentRange, int &correctAns);
+bool GiveThreeAttempts(int leftNum, char mathSymbol, int rightNum, int correctAns, const string &userName);
+
+int main() {
+    // Variables
+    string userInput;
+    string userName;
+    int mathLevel = 1;
+    int currentRange = LEVEL_RANGE_CHANGE;
+    int totalCorrect = 0;
+    int totalIncorrect = 0;
+    int ansCorrect = 0;
+    int ansIncorrect = 0;
+    vector<vector<int>> questions;
+
+    // Display the game intro and get the user name
+    DisplayGameIntro();
+    userName = GetUserName();
+
+    // Main Game Loop
+    do {
+        int correctAns;
+        vector<int> question = GenerateRandomQuestion(mathLevel, currentRange, correctAns);
+
+        // Check if the user answers correctly within three attempts
+        bool isCorrect = GiveThreeAttempts(question[0], static_cast<char>(question[1]), question[2], correctAns, userName);
+        question.push_back(isCorrect ? 1 : 0);
+        questions.push_back(question);
+
+        if (isCorrect) {
+            ansCorrect++;
+        } else {
+            ansIncorrect++;
+        }
+
+        CheckForLevelChange(mathLevel, ansCorrect, ansIncorrect, currentRange);
+
+    } while (AskToPlayAgain());
+
+    // Display summary report
+    DisplaySummaryReport(questions, totalCorrect, totalIncorrect);
+
+    cout << "End of Program" << endl;
+    return 0;
+}
+
+// Function Implementations
+void DisplayGameIntro() {
+    cout << " ***************************************************" << endl;
+    cout << "  __  __       _   _       _____      _  " << endl;
+    cout << " |  \\/  | __ _| |_| |__   |_   _|   _| |_ ___  _ __ " << endl;
+    cout << " | |\\/| |/ _` | __| '_ \\    | || | | | __/ _ \\| '__| " << endl;
+    cout << " | |  | | (_| | |_| | | |   | || |_| | || (_) | |   " << endl;
+    cout << " |_|  |_|\\__,_|\\__|_| |_|   |_| \\__,_|\\__\\___/|_|   " << endl;
+    cout << " ****************************************************" << endl;
+    cout << "\n\t *   Welcome to Math Tutor 5!   *\n" << endl;
+}
+
+string GetUserName() {
+    string name;
+    cout << "Please enter your name: ";
+    getline(cin, name);
+    return name;
+}
+
+int GetNumericValue(const string &prompt) {
+    int value;
+    while (true) {
+        cout << prompt;
+        if (cin >> value) {
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            return value;
+        } else {
+            cin.clear();
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cout << "Invalid input! Please enter a valid number.\n";
+        }
+    }
+}
+
+bool AskToPlayAgain() {
+    string response;
+    cout << "Do you want to continue (y=yes | n=no)? ";
+    getline(cin, response);
+    for (char &c : response) {
+        c = tolower(c);
+    }
+    return response == "y" || response == "yes";
+}
+
+void DisplaySummaryReport(const vector<vector<int>> &questions, int totalCorrect, int totalIncorrect) {
+    cout << "\n\n*************** Summary Report ***************\n";
+    cout << left << setw(10) << "Level"
+         << setw(10) << "LeftNum"
+         << setw(10) << "Symbol"
+         << setw(10) << "RightNum"
+         << setw(15) << "Correct Ans"
+         << setw(15) << "Attempts" << endl;
+
+    for (const auto &question : questions) {
+        cout << left << setw(10) << question[0]
+             << setw(10) << question[1]
+             << setw(10) << static_cast<char>(question[2])
+             << setw(10) << question[3]
+             << setw(15) << question[4]
+             << setw(15) << (question[5] == 1 ? "Correct" : "Incorrect") << endl;
+    }
+
+    cout << "\n*************** Summary Totals ***************\n";
+    cout << "Total Questions: " << questions.size() << endl;
+    cout << "Total Correct: " << totalCorrect << endl;
+    cout << "Total Incorrect: " << totalIncorrect << endl;
+    cout << "Accuracy: " << (totalCorrect * 100) / questions.size() << "%\n";
+}
+
+void CheckForLevelChange(int &mathLevel, int &ansCorrect, int &ansIncorrect, int &currentRange) {
+    if (ansCorrect == 3) {
+        mathLevel++;
+        currentRange += LEVEL_RANGE_CHANGE;
+        cout << "WooHoo!! Leveling you UP to " << mathLevel << endl;
+        ansCorrect = 0;
+    } else if (ansIncorrect == 3 && mathLevel > 1) {
+        mathLevel--;
+        currentRange -= LEVEL_RANGE_CHANGE;
+        cout << "BooHoo - Leveling you DOWN to " << mathLevel << endl;
+        ansIncorrect = 0;
+    }
+}
+
+vector<int> GenerateRandomQuestion(int mathLevel, int currentRange, int &correctAns) {
+    int leftNum = rand() % currentRange + 1;
+    int rightNum = rand() % currentRange + 1;
+    char mathSymbol;
+    int type = rand() % 4;
+
+    switch (type) {
+        case 0:
+            mathSymbol = '+';
+            correctAns = leftNum + rightNum;
+            break;
+        case 1:
+            if (leftNum < rightNum) swap(leftNum, rightNum);
+            mathSymbol = '-';
+            correctAns = leftNum - rightNum;
+            break;
+        case 2:
+            mathSymbol = '*';
+            correctAns = leftNum * rightNum;
+            break;
+        case 3:
+            if (rightNum == 0) rightNum = 1;
+            mathSymbol = '/';
+            correctAns = leftNum / rightNum;
+            break;
+        default:
+            exit(-1);
+    }
+    return {leftNum, mathSymbol, rightNum, correctAns};
+}
+
+bool GiveThreeAttempts(int leftNum, char mathSymbol, int rightNum, int correctAns, const string &userName) {
+    for (int attempts = 1; attempts <= MAX_ATTEMPTS; ++attempts) {
+        int userAnswer = GetNumericValue("[Attempt " + to_string(attempts) + "] What is " + to_string(leftNum) + " " + mathSymbol + " " + to_string(rightNum) + "? ");
+
+        if (userAnswer == correctAns) {
+            cout << "Great Job, that is correct!" << endl;
+            return true;
+        } else {
+            cout << "Sorry, that was incorrect. You have " << MAX_ATTEMPTS - attempts << " attempt(s) left.\n";
+        }
+    }
+    cout << "Sorry, you are out of attempts. The correct answer is " << correctAns << ".\n";
+    return false;
+}
